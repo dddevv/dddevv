@@ -43,9 +43,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Webhook endpoint for Discord notifications
+// Enhanced webhook security with authentication
 app.post('/api/webhook', async (req, res) => {
   try {
+    // Security: Check for webhook authentication token
+    const authToken = req.headers['x-webhook-token'];
+    const expectedToken = process.env.WEBHOOK_AUTH_TOKEN || 'default-secure-token-2024';
+    
+    if (authToken !== expectedToken) {
+      console.warn('Unauthorized webhook attempt:', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        timestamp: new Date().toISOString()
+      });
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized webhook request' 
+      });
+    }
+
     console.log('Webhook request received:', {
       timestamp: new Date().toISOString(),
       ip: req.ip,
