@@ -558,8 +558,50 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 0;
+            padding: 15px;
             border-bottom: 1px solid rgba(100, 255, 218, 0.1);
+            background: rgba(26, 26, 46, 0.5);
+            margin-bottom: 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .cart-item:hover {
+            background: rgba(26, 26, 46, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .cart-item-info h4 {
+            color: #64ffda;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+        
+        .cart-item-info div {
+            color: #b0bec5;
+            font-size: 0.9rem;
+        }
+        
+        .cart-item-price {
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .remove-item {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .remove-item:hover {
+            background: #d32f2f;
+            transform: scale(1.05);
         }
         
         .cart-item-info h4 {
@@ -843,7 +885,7 @@
                             <div class="offer-text">DM for custom offers</div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('ywtt', 15, 'ywtt (4L Rep)')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('ywtt', 15, 'ywtt (4L Rep)', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -857,7 +899,7 @@
                             <div class="offer-text">DM for custom offers</div>
                         </div>
                         <div class="product-price">$20</div>
-                        <button class="buy-button" onclick="addToCart('rap-account', 20, 'Rap Account (1-5k)')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('rap-account', 20, 'Rap Account (1-5k)', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -871,7 +913,7 @@
                             <div class="offer-text">DM for custom offers</div>
                         </div>
                         <div class="product-price">$10</div>
-                        <button class="buy-button" onclick="addToCart('aged-roblox-account', 10, '2010 Aged Roblox Account')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('aged-roblox-account', 10, '2010 Aged Roblox Account', event)">Add to Cart</button>
                     </div>
                 </div>
             </div>
@@ -894,7 +936,7 @@
                             <div class="offer-text">DM to make an offer</div>
                         </div>
                         <div class="product-price">$70</div>
-                        <button class="buy-button" onclick="addToCart('jtjj', 70, '@jtjj')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('jtjj', 70, '@jtjj', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -907,7 +949,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('abroad', 15, '@abroad.')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('abroad', 15, '@abroad.', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -920,7 +962,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('biographing', 15, '@biographing')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('biographing', 15, '@biographing', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -933,7 +975,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('metamask', 15, '@www.metamask.io')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('metamask', 15, '@www.metamask.io', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -946,7 +988,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('blockchain', 15, '@www.blockchain.com')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('blockchain', 15, '@www.blockchain.com', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -959,7 +1001,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('camsoda', 15, '@www.camsoda.com')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('camsoda', 15, '@www.camsoda.com', event)">Add to Cart</button>
                     </div>
                     
                     <div class="product-card">
@@ -972,7 +1014,7 @@
                             </div>
                         </div>
                         <div class="product-price">$15</div>
-                        <button class="buy-button" onclick="addToCart('orgasm', 15, '@orgasm.com')">Add to Cart</button>
+                        <button class="buy-button" onclick="addToCart('orgasm', 15, '@orgasm.com', event)">Add to Cart</button>
                     </div>
                 </div>
             </div>
@@ -1885,7 +1927,7 @@
                             'Content-Type': 'application/json',
                             'x-webhook-token': 'default-secure-token-2024'
                         },
-                        }
+                        body: JSON.stringify({})
                     });
                     
                     if (!response.ok) {
@@ -1918,20 +1960,30 @@
         }
 
         function updateCartDisplay() {
+            console.log('Updating cart display, cart items:', cart);
+            
             const cartCount = document.getElementById('cartCount');
             const navCartCount = document.getElementById('navCartCount');
             const cartItems = document.getElementById('cartItems');
             const cartTotalEl = document.getElementById('cartTotal');
             
+            if (!cartCount || !navCartCount || !cartItems || !cartTotalEl) {
+                console.error('Cart elements not found!');
+                return;
+            }
+            
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            console.log('Total items in cart:', totalItems);
             
             // Update both cart count displays
-            if (cartCount) cartCount.textContent = totalItems;
-            if (navCartCount) navCartCount.textContent = totalItems;
+            cartCount.textContent = totalItems;
+            navCartCount.textContent = totalItems;
             
+            // Clear cart items
             cartItems.innerHTML = '';
             cartTotal = 0;
             
+            // Add each item to display
             cart.forEach(item => {
                 cartTotal += item.price * item.quantity;
                 
@@ -1948,7 +2000,9 @@
                 cartItems.appendChild(itemEl);
             });
             
+            // Update total
             cartTotalEl.textContent = cartTotal.toFixed(2);
+            console.log('Cart display updated, total:', cartTotal);
         }
 
         function toggleCart() {
@@ -3465,29 +3519,48 @@
         }
 
         // Update existing functions to work with database system
-        function addToCart(id, price, name) {
+        function addToCart(id, price, name, event) {
+            console.log('Adding to cart:', { id, price, name });
+            
             const existingItem = cart.find(item => item.id === id);
             
             if (existingItem) {
                 existingItem.quantity += 1;
+                console.log('Updated existing item quantity:', existingItem.quantity);
             } else {
                 cart.push({ id, price, name, quantity: 1 });
+                console.log('Added new item to cart');
             }
             
+            // Recalculate total
             cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            console.log('New cart total:', cartTotal);
+            
+            // Update display immediately
             updateCartDisplay();
+            
+            // Show notification
             showNotification(`${name} added to cart!`);
-            // Cart count updated by updateCartDisplay()
             
-            const button = event.target;
-            const originalText = button.textContent;
-            button.textContent = 'Added!';
-            button.style.background = '#4caf50';
+            // Update button state if event is provided
+            if (event && event.target) {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Added!';
+                button.style.background = '#4caf50';
+                button.style.transform = 'scale(0.95)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                    button.style.transform = '';
+                }, 2000);
+            }
             
+            // Force UI update
             setTimeout(() => {
-                button.textContent = originalText;
-                button.style.background = '';
-            }, 1000);
+                updateCartDisplay();
+            }, 100);
         }
 
         // Enhanced checkout with crypto transaction ID capture
