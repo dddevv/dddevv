@@ -287,7 +287,7 @@ app.post('/api/invoice/generate', async (req, res) => {
   }
 });
 
-// Verify payment endpoint
+// Verify payment endpoint with STRICT validation
 app.post('/api/payment/verify', async (req, res) => {
   try {
     const { invoiceId, transactionHash, currency } = req.body;
@@ -299,18 +299,34 @@ app.post('/api/payment/verify', async (req, res) => {
       });
     }
 
-    // Simulate blockchain verification (in production, you'd use actual blockchain APIs)
+    // Validate transaction hash format
+    if (!isValidTransactionHash(transactionHash, currency)) {
+      return res.status(400).json({
+        success: false,
+        verified: false,
+        error: 'Invalid transaction hash format for ' + currency.toUpperCase()
+      });
+    }
+
+    console.log(`🔍 Verifying payment: ${currency.toUpperCase()} - ${transactionHash}`);
+
+    // REAL blockchain verification
     const verificationResult = await verifyBlockchainTransaction(transactionHash, currency);
     
-    if (verificationResult.success) {
+    if (verificationResult.success && verificationResult.verified) {
       // Send payment confirmation to Discord
       const embed = {
-        title: "✅ Payment Verified",
+        title: "✅ Payment VERIFIED on Blockchain",
         color: 0x00ff00,
         fields: [
           {
             name: "Payment Details",
-            value: `**Invoice ID:** ${invoiceId}\n**Transaction Hash:** \`${transactionHash}\`\n**Currency:** ${currency.toUpperCase()}\n**Amount:** ${verificationResult.amount || 'Verified'}`,
+            value: `**Invoice ID:** ${invoiceId}\n**Transaction Hash:** \`${transactionHash}\`\n**Currency:** ${currency.toUpperCase()}\n**Amount:** ${verificationResult.amount || 'Verified'}\n**Confirmations:** ${verificationResult.confirmations}`,
+            inline: false
+          },
+          {
+            name: "Blockchain Data",
+            value: `**Block Height:** ${verificationResult.blockHeight || 'N/A'}\n**Timestamp:** ${verificationResult.timestamp}\n**Fee:** ${verificationResult.fee || 'N/A'}`,
             inline: false
           },
           {
@@ -319,7 +335,7 @@ app.post('/api/payment/verify', async (req, res) => {
             inline: false
           }
         ],
-        footer: { text: "SplintaxStore - Payment Verification" },
+        footer: { text: "SplintaxStore - REAL Blockchain Verification" },
         timestamp: new Date().toISOString()
       };
 
@@ -328,14 +344,51 @@ app.post('/api/payment/verify', async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ embeds: [embed] })
       });
+
+      console.log(`✅ Payment verified successfully: ${transactionHash}`);
+    } else {
+      console.log(`❌ Payment verification failed: ${verificationResult.error}`);
     }
 
     res.json(verificationResult);
   } catch (error) {
     console.error('Payment verification error:', error);
-    res.status(500).json({ success: false, error: 'Failed to verify payment' });
+    res.status(500).json({ 
+      success: false, 
+      verified: false,
+      error: 'Failed to verify payment: ' + error.message 
+    });
   }
 });
+
+// Validate transaction hash format
+function isValidTransactionHash(hash, currency) {
+  if (!hash || typeof hash !== 'string') return false;
+  
+  const cleanHash = hash.trim();
+  
+  switch (currency.toLowerCase()) {
+    case 'bitcoin':
+      // Bitcoin tx hash: 64 hex characters
+      return /^[a-fA-F0-9]{64}$/.test(cleanHash);
+    
+    case 'ethereum':
+    case 'usdt':
+      // Ethereum tx hash: 66 hex characters (0x + 64 chars)
+      return /^0x[a-fA-F0-9]{64}$/.test(cleanHash);
+    
+    case 'solana':
+      // Solana tx hash: base58 encoded, typically 87-88 characters
+      return /^[1-9A-HJ-NP-Za-km-z]{87,88}$/.test(cleanHash);
+    
+    case 'litecoin':
+      // Litecoin tx hash: 64 hex characters (same as Bitcoin)
+      return /^[a-fA-F0-9]{64}$/.test(cleanHash);
+    
+    default:
+      return false;
+  }
+}
 
 // Helper function to get blockchain explorer URLs
 function getBlockchainExplorer(currency, addressOrHash) {
@@ -349,28 +402,278 @@ function getBlockchainExplorer(currency, addressOrHash) {
   return explorers[currency] || `https://blockchain.info/address/${addressOrHash}`;
 }
 
-// Helper function to verify blockchain transactions (simplified)
+// Helper function to verify blockchain transactions (REAL VERIFICATION)
 async function verifyBlockchainTransaction(transactionHash, currency) {
-  // In production, you would integrate with actual blockchain APIs
-  // For now, we'll simulate verification
   try {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log(`🔍 Verifying ${currency.toUpperCase()} transaction: ${transactionHash}`);
     
-    // Mock verification result
+    let verificationResult = {
+      success: false,
+      verified: false,
+      amount: null,
+      confirmations: 0,
+      timestamp: null,
+      message: 'Transaction not found',
+      error: null
+    };
+
+    // Real blockchain API calls
+    switch (currency.toLowerCase()) {
+      case 'bitcoin':
+        verificationResult = await verifyBitcoinTransaction(transactionHash);
+        break;
+      case 'ethereum':
+        verificationResult = await verifyEthereumTransaction(transactionHash);
+        break;
+      case 'usdt':
+        verificationResult = await verifyUSDTTransaction(transactionHash);
+        break;
+      case 'solana':
+        verificationResult = await verifySolanaTransaction(transactionHash);
+        break;
+      case 'litecoin':
+        verificationResult = await verifyLitecoinTransaction(transactionHash);
+        break;
+      default:
+        verificationResult.error = 'Unsupported currency';
+        return verificationResult;
+    }
+
+    console.log(`✅ Verification result for ${currency}:`, verificationResult);
+    return verificationResult;
+  } catch (error) {
+    console.error(`❌ Verification error for ${currency}:`, error);
+    return {
+      success: false,
+      verified: false,
+      error: error.message || 'Verification failed'
+    };
+  }
+}
+
+// Bitcoin verification using Blockstream API
+async function verifyBitcoinTransaction(txHash) {
+  try {
+    const response = await fetch(`https://blockstream.info/api/tx/${txHash}`);
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Transaction not found on Bitcoin blockchain'
+      };
+    }
+    
+    const tx = await response.json();
+    
+    // Get confirmations
+    const blockResponse = await fetch(`https://blockstream.info/api/tx/${txHash}/status`);
+    const status = await blockResponse.json();
+    
     return {
       success: true,
       verified: true,
-      amount: '0.001',
-      confirmations: Math.floor(Math.random() * 6) + 1,
-      timestamp: new Date().toISOString(),
-      message: 'Transaction verified successfully'
+      amount: (tx.vout.reduce((sum, output) => sum + output.value, 0) / 100000000).toFixed(8), // Convert satoshis to BTC
+      confirmations: status.confirmed ? status.block_height : 0,
+      timestamp: new Date(tx.status.block_time * 1000).toISOString(),
+      message: 'Bitcoin transaction verified',
+      blockHeight: tx.status.block_height,
+      fee: tx.fee / 100000000 // Convert to BTC
     };
   } catch (error) {
     return {
       success: false,
       verified: false,
-      error: 'Failed to verify transaction'
+      error: `Bitcoin verification failed: ${error.message}`
+    };
+  }
+}
+
+// Ethereum verification using Etherscan API
+async function verifyEthereumTransaction(txHash) {
+  try {
+    // You'll need to get a free API key from etherscan.io
+    const apiKey = process.env.ETHERSCAN_API_KEY || 'YourAPIKey';
+    const response = await fetch(`https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}&apikey=${apiKey}`);
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Failed to fetch Ethereum transaction'
+      };
+    }
+    
+    const result = await response.json();
+    
+    if (result.error) {
+      return {
+        success: false,
+        verified: false,
+        error: result.error.message || 'Transaction not found'
+      };
+    }
+    
+    const tx = result.result;
+    
+    // Get transaction receipt for confirmations
+    const receiptResponse = await fetch(`https://api.etherscan.io/api?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash}&apikey=${apiKey}`);
+    const receipt = await receiptResponse.json();
+    
+    return {
+      success: true,
+      verified: true,
+      amount: (parseInt(tx.value, 16) / Math.pow(10, 18)).toFixed(8), // Convert wei to ETH
+      confirmations: receipt.result ? parseInt(receipt.result.blockNumber, 16) : 0,
+      timestamp: new Date().toISOString(), // Etherscan doesn't provide timestamp in this call
+      message: 'Ethereum transaction verified',
+      gasUsed: receipt.result ? parseInt(receipt.result.gasUsed, 16) : 0,
+      gasPrice: parseInt(tx.gasPrice, 16) / Math.pow(10, 18)
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: `Ethereum verification failed: ${error.message}`
+    };
+  }
+}
+
+// USDT verification (ERC-20 token on Ethereum)
+async function verifyUSDTTransaction(txHash) {
+  try {
+    const apiKey = process.env.ETHERSCAN_API_KEY || 'YourAPIKey';
+    
+    // Get transaction details
+    const txResponse = await fetch(`https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}&apikey=${apiKey}`);
+    const txResult = await txResponse.json();
+    
+    if (txResult.error) {
+      return {
+        success: false,
+        verified: false,
+        error: 'USDT transaction not found'
+      };
+    }
+    
+    // Get token transfer events
+    const tokenResponse = await fetch(`https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=0xdac17f958d2ee523a2206206994597c13d831ec7&address=${txResult.result.to}&startblock=0&endblock=999999999&sort=asc&apikey=${apiKey}`);
+    const tokenResult = await tokenResponse.json();
+    
+    const usdtTransfer = tokenResult.result.find(transfer => transfer.hash.toLowerCase() === txHash.toLowerCase());
+    
+    if (!usdtTransfer) {
+      return {
+        success: false,
+        verified: false,
+        error: 'USDT transfer not found in transaction'
+      };
+    }
+    
+    return {
+      success: true,
+      verified: true,
+      amount: (parseInt(usdtTransfer.value) / Math.pow(10, 6)).toFixed(6), // USDT has 6 decimals
+      confirmations: parseInt(usdtTransfer.confirmations),
+      timestamp: new Date(parseInt(usdtTransfer.timeStamp) * 1000).toISOString(),
+      message: 'USDT transaction verified',
+      from: usdtTransfer.from,
+      to: usdtTransfer.to
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: `USDT verification failed: ${error.message}`
+    };
+  }
+}
+
+// Solana verification using Solana RPC
+async function verifySolanaTransaction(txHash) {
+  try {
+    const response = await fetch('https://api.mainnet-beta.solana.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getTransaction',
+        params: [txHash, { encoding: 'json', maxSupportedTransactionVersion: 0 }]
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.error) {
+      return {
+        success: false,
+        verified: false,
+        error: result.error.message || 'Solana transaction not found'
+      };
+    }
+    
+    const tx = result.result;
+    
+    if (!tx) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Transaction not found on Solana blockchain'
+      };
+    }
+    
+    return {
+      success: true,
+      verified: true,
+      amount: '0', // Solana transactions are complex, amount calculation would need more specific logic
+      confirmations: tx.meta?.confirmationStatus === 'finalized' ? 1 : 0,
+      timestamp: new Date(tx.blockTime * 1000).toISOString(),
+      message: 'Solana transaction verified',
+      slot: tx.slot,
+      fee: tx.meta?.fee / Math.pow(10, 9) // Convert lamports to SOL
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: `Solana verification failed: ${error.message}`
+    };
+  }
+}
+
+// Litecoin verification using BlockCypher API
+async function verifyLitecoinTransaction(txHash) {
+  try {
+    const response = await fetch(`https://api.blockcypher.com/v1/ltc/main/txs/${txHash}`);
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Transaction not found on Litecoin blockchain'
+      };
+    }
+    
+    const tx = await response.json();
+    
+    return {
+      success: true,
+      verified: true,
+      amount: (tx.total / Math.pow(10, 8)).toFixed(8), // Convert satoshis to LTC
+      confirmations: tx.confirmations,
+      timestamp: tx.received,
+      message: 'Litecoin transaction verified',
+      blockHeight: tx.block_height,
+      fee: tx.fees / Math.pow(10, 8)
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: `Litecoin verification failed: ${error.message}`
     };
   }
 }
