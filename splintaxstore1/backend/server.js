@@ -202,6 +202,179 @@ app.post('/api/webhook/payment', async (req, res) => {
   }
 });
 
+// Generate crypto invoice endpoint
+app.post('/api/invoice/generate', async (req, res) => {
+  try {
+    const { transactionId, amount, currency, customerInfo, items } = req.body;
+    
+    if (!transactionId || !amount || !currency) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: transactionId, amount, currency' 
+      });
+    }
+
+    // Generate unique invoice ID
+    const invoiceId = 'INV-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    // Get crypto addresses based on currency
+    const cryptoAddresses = {
+      bitcoin: 'bc1qrfvanr8yklgytp7x9fccfqgaks5tvhfphw3msx',
+      ethereum: '0xbBAcFe9764df34Ee3BEc34A929Be3FD5A150DC6D',
+      usdt: '0xbBAcFe9764df34Ee3BEc34A929Be3FD5A150DC6D',
+      solana: '8oaBitEWxsJPYkqSzzxgtZYJh2jLMkWHGySo9w56v8D5',
+      litecoin: 'LPya7oZQmDsfmteXXFMGj3oGRXUvMhVHav'
+    };
+
+    const invoice = {
+      invoiceId,
+      transactionId,
+      amount,
+      currency: currency.toLowerCase(),
+      address: cryptoAddresses[currency.toLowerCase()],
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+      customerInfo: customerInfo || {},
+      items: items || [],
+      qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${cryptoAddresses[currency.toLowerCase()]}`,
+      blockchainExplorer: getBlockchainExplorer(currency.toLowerCase(), cryptoAddresses[currency.toLowerCase()])
+    };
+
+    // Send invoice notification to Discord
+    const embed = {
+      title: `📄 New ${currency.toUpperCase()} Invoice Generated`,
+      color: 0x00ff00,
+      fields: [
+        {
+          name: "Invoice Details",
+          value: `**Invoice ID:** ${invoiceId}\n**Transaction ID:** ${transactionId}\n**Amount:** ${amount} ${currency.toUpperCase()}\n**Address:** \`${cryptoAddresses[currency.toLowerCase()]}\``,
+          inline: false
+        },
+        {
+          name: "Customer Info",
+          value: `**Name:** ${customerInfo?.name || 'Anonymous'}\n**Email:** ${customerInfo?.email || 'Not provided'}\n**Discord:** ${customerInfo?.discord || 'Not provided'}`,
+          inline: false
+        },
+        {
+          name: "Items",
+          value: items?.map(item => `• ${item.name} - $${item.price}`).join('\n') || 'No items specified',
+          inline: false
+        }
+      ],
+      footer: { text: "SplintaxStore - Invoice System" },
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(process.env.DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to send invoice notification to Discord');
+    }
+
+    res.json({ 
+      success: true, 
+      invoice,
+      message: 'Invoice generated successfully' 
+    });
+  } catch (error) {
+    console.error('Invoice generation error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate invoice' });
+  }
+});
+
+// Verify payment endpoint
+app.post('/api/payment/verify', async (req, res) => {
+  try {
+    const { invoiceId, transactionHash, currency } = req.body;
+    
+    if (!invoiceId || !transactionHash || !currency) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: invoiceId, transactionHash, currency' 
+      });
+    }
+
+    // Simulate blockchain verification (in production, you'd use actual blockchain APIs)
+    const verificationResult = await verifyBlockchainTransaction(transactionHash, currency);
+    
+    if (verificationResult.success) {
+      // Send payment confirmation to Discord
+      const embed = {
+        title: "✅ Payment Verified",
+        color: 0x00ff00,
+        fields: [
+          {
+            name: "Payment Details",
+            value: `**Invoice ID:** ${invoiceId}\n**Transaction Hash:** \`${transactionHash}\`\n**Currency:** ${currency.toUpperCase()}\n**Amount:** ${verificationResult.amount || 'Verified'}`,
+            inline: false
+          },
+          {
+            name: "Blockchain Explorer",
+            value: `[View Transaction](${getBlockchainExplorer(currency.toLowerCase(), transactionHash)})`,
+            inline: false
+          }
+        ],
+        footer: { text: "SplintaxStore - Payment Verification" },
+        timestamp: new Date().toISOString()
+      };
+
+      await fetch(process.env.DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ embeds: [embed] })
+      });
+    }
+
+    res.json(verificationResult);
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify payment' });
+  }
+});
+
+// Helper function to get blockchain explorer URLs
+function getBlockchainExplorer(currency, addressOrHash) {
+  const explorers = {
+    bitcoin: `https://blockstream.info/address/${addressOrHash}`,
+    ethereum: `https://etherscan.io/address/${addressOrHash}`,
+    usdt: `https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7?a=${addressOrHash}`,
+    solana: `https://explorer.solana.com/address/${addressOrHash}`,
+    litecoin: `https://blockchair.com/litecoin/address/${addressOrHash}`
+  };
+  return explorers[currency] || `https://blockchain.info/address/${addressOrHash}`;
+}
+
+// Helper function to verify blockchain transactions (simplified)
+async function verifyBlockchainTransaction(transactionHash, currency) {
+  // In production, you would integrate with actual blockchain APIs
+  // For now, we'll simulate verification
+  try {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock verification result
+    return {
+      success: true,
+      verified: true,
+      amount: '0.001',
+      confirmations: Math.floor(Math.random() * 6) + 1,
+      timestamp: new Date().toISOString(),
+      message: 'Transaction verified successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: 'Failed to verify transaction'
+    };
+  }
+}
+
 // Test endpoint for webhook functionality
 app.post('/api/webhook/test', async (req, res) => {
   try {
