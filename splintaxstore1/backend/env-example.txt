@@ -1,0 +1,13 @@
+# Discord Webhook Configuration
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# Frontend URL (for CORS) - Replace with your actual frontend domain
+FRONTEND_URL=https://your-frontend-domain.com
+
+# Optional: Additional security settings
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
