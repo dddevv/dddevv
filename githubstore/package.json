@@ -1,0 +1,34 @@
+{
+  "name": "githubstore",
+  "version": "1.0.0",
+  "description": "Premium digital marketplace with Discord webhook integration",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "node test-transaction-validation.js",
+    "admin": "node admin/ip-admin-tool.js"
+  },
+  "keywords": [
+    "marketplace",
+    "discord",
+    "webhook",
+    "ecommerce",
+    "premium-goods"
+  ],
+  "author": "GitHubStore",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^6.7.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
